@@ -1,16 +1,31 @@
-# GardeRobeBudgetApp
+# Garde Robe Budget App
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.0.5.
 
+## Installation
+
+1.  Install the dependencies:
+    ```bash
+    npm install
+    ```
+2.  Set up the database:
+    - This project uses a PostgreSQL database.
+    - Create a `.env` file inside the `server` directory.
+    - Add the `DATABASE_URL` environment variable to the `.env` file. For example:
+      ```
+      DATABASE_URL=postgresql://user:password@host:port/database
+      ```
+    - Make sure you have a running PostgreSQL server and the connection string is correct.
+
 ## Development server
 
-To start a local development server, run:
+To start a local development server for both the frontend and the backend, run:
 
 ```bash
-ng serve
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+This will start the Angular development server on `http://localhost:4200/` and the backend server on `http://localhost:3000/`. The application will automatically reload whenever you modify any of the source files.
 
 ## Code scaffolding
 
