@@ -1,5 +1,33 @@
 import pool from './database';
 
+interface ItemRow {
+    item_id: number;
+    user_id: number;
+    name: string;
+    category: 'Vêtement' | 'Chaussures' | 'Parfum';
+    estimated_cost: string;
+    actual_cost: string | null;
+    priority: 'Haute' | 'Moyenne' | 'Basse';
+    purchase_month: string;
+    is_purchased: boolean;
+    notes: string | null;
+    rating: number | null;
+    created_at: Date;
+}
+
+interface ImageRow {
+    image_id: number;
+    item_id: number;
+    image_url: string;
+}
+
+interface LinkRow {
+    link_id: number;
+    item_id: number;
+    url: string;
+    annotation: string;
+}
+
 // ---- Items ----
 export const getItems = async () => {
     // We also need to fetch associated images and links
@@ -7,9 +35,9 @@ export const getItems = async () => {
     const imagesResult = await pool.query('SELECT * FROM Images');
     const linksResult = await pool.query('SELECT * FROM Links');
 
-    const items = itemsResult.rows.map(item => {
-        const images = imagesResult.rows.filter(img => img.item_id === item.item_id);
-        const links = linksResult.rows.filter(link => link.item_id === item.item_id);
+    const items = itemsResult.rows.map((item: ItemRow) => {
+        const images = imagesResult.rows.filter((img: ImageRow) => img.item_id === item.item_id);
+        const links = linksResult.rows.filter((link: LinkRow) => link.item_id === item.item_id);
         return {
             id: item.item_id,
             name: item.name,
@@ -21,8 +49,8 @@ export const getItems = async () => {
             isPurchased: item.is_purchased,
             notes: item.notes,
             rating: item.rating,
-            imageUrls: images.map(img => img.image_url),
-            links: links.map(l => ({ id: l.link_id, url: l.url, annotation: l.annotation })),
+            imageUrls: images.map((img: ImageRow) => img.image_url),
+            links: links.map((l: LinkRow) => ({ id: l.link_id, url: l.url, annotation: l.annotation })),
         };
     });
     return items;
@@ -65,15 +93,43 @@ export const deleteItem = async (id: number) => {
 };
 
 export const updateItem = async (id: number, updates: any) => {
-    const { actualCost, isPurchased, notes, rating } = updates;
-    // This is a simplified update. A more robust solution would handle different fields.
+    const fieldMapping: { [key: string]: string } = {
+        name: 'name',
+        category: 'category',
+        estimatedCost: 'estimated_cost',
+        priority: 'priority',
+        purchaseMonth: 'purchase_month',
+        isPurchased: 'is_purchased',
+        actualCost: 'actual_cost',
+        notes: 'notes',
+        rating: 'rating',
+    };
+
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let valueCount = 1;
+
+    for (const key in updates) {
+        if (Object.prototype.hasOwnProperty.call(updates, key) && fieldMapping[key]) {
+            setClauses.push(`${fieldMapping[key]} = $${valueCount++}`);
+            values.push(updates[key]);
+        }
+    }
+
+    if (setClauses.length === 0) {
+        // Nothing to update
+        const result = await pool.query('SELECT * FROM Items WHERE item_id = $1', [id]);
+        return result.rows[0];
+    }
+
+    values.push(id);
     const query = `
         UPDATE Items
-        SET actual_cost = $1, is_purchased = $2, notes = $3, rating = $4
-        WHERE item_id = $5
+        SET ${setClauses.join(', ')}
+        WHERE item_id = $${valueCount}
         RETURNING *;
     `;
-    const values = [actualCost, isPurchased, notes, rating, id];
+
     const result = await pool.query(query, values);
     return result.rows[0];
 };
