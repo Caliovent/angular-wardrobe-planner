@@ -1,0 +1,4 @@
+[0] /bin/sh: 1: ng: not found
+[0] ng serve exited with code 127
+[1] /bin/sh: 1: nodemon: not found
+[1] nodemon --watch server/src -e ts --exec ts-node server/src/index.ts exited with code 127
