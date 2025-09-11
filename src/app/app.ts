@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, signal, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { ApiService, WardrobeItem, ItemLink } from './api.service';
 import { debounceTime, switchMap, tap } from 'rxjs/operators';
 import { Subject } from 'rxjs';
@@ -8,12 +9,13 @@ import { Subject } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
+  title = 'garde-robe-budget-app';
   private apiService = inject(ApiService);
 
   // -- State Management with Signals --
