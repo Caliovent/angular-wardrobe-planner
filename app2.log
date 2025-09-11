@@ -1,0 +1,7 @@
+[1] [31m[nodemon] Failed to parse config /app/package.json[39m
+[1] SyntaxError: Expected ',' or '}' after property value in JSON at position 120 (line 6 column 31)
+[1]     at JSON.parse (<anonymous>)
+[1]     at /app/node_modules/nodemon/lib/config/load.js:174:23
+[1]     at FSReqCallback.readFileAfterClose [as oncomplete] (node:internal/fs/read/context:68:3)
+[1] ./node_modules/.bin/nodemon --watch server/src -e ts --exec ./node_modules/.bin/ts-node server/src/index.ts exited with code 1
+[0] ❯ Building...
