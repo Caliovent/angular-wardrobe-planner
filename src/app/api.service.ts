@@ -1,31 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
-// Note: The WardrobeItem and ItemLink interfaces should be moved to a separate models file.
-// I will do this refactoring later if I have time.
-export interface ItemLink {
-  id: number;
-  url: string;
-  annotation: string;
-}
-
-export interface WardrobeItem {
-  id: number;
-  name: string;
-  category: 'Vêtement' | 'Chaussures' | 'Parfum';
-  estimatedCost: number;
-  actualCost?: number;
-  priority: 'Haute' | 'Moyenne' | 'Basse';
-  purchaseMonth: string; // Format YYYY-MM
-  isPurchased: boolean;
-  purchaseDate?: Date;
-  notes?: string;
-  rating?: number; // de 1 à 5
-  imageUrls?: string[];
-  links?: ItemLink[];
-}
-
+import { WardrobeItem, ItemLink } from './models';
 
 @Injectable({
   providedIn: 'root'
