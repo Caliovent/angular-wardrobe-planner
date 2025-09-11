@@ -51,7 +51,7 @@ describe('Database Queries', () => {
             expect(createdItem.id).toBeDefined();
             expect(createdItem.name).toBe(newItemData.name);
             expect(createdItem.category).toBe(newItemData.category);
-            expect(createdItem.estimatedCost).toBe(newItemData.estimatedCost);
+            expect(parseFloat(createdItem.estimatedCost)).toBe(newItemData.estimatedCost);
             expect(createdItem.isPurchased).toBe(false);
 
             // Verify it's in the database
@@ -96,11 +96,11 @@ describe('Database Queries', () => {
             expect(updatedItem).toBeDefined();
             expect(updatedItem.name).toBe(updates.name);
             expect(updatedItem.category).toBe(updates.category);
-            expect(updatedItem.estimated_cost).toBe(String(updates.estimatedCost));
+            expect(parseFloat(updatedItem.estimated_cost)).toBe(updates.estimatedCost);
             expect(updatedItem.priority).toBe(updates.priority);
             expect(updatedItem.purchase_month).toBe(updates.purchaseMonth);
             expect(updatedItem.is_purchased).toBe(updates.isPurchased);
-            expect(updatedItem.actual_cost).toBe(String(updates.actualCost));
+            expect(parseFloat(updatedItem.actual_cost)).toBe(updates.actualCost);
             expect(updatedItem.notes).toBe(updates.notes);
             expect(updatedItem.rating).toBe(updates.rating);
         });
