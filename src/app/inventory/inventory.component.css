@@ -1,0 +1,32 @@
+/* Using Tailwind CSS via CDN, so this file is for component-specific styles that aren't covered by utility classes. */
+
+/* Custom input styles */
+.input-style {
+  @apply mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm;
+}
+
+/* Custom filter dropdown styles */
+.filter-style {
+  @apply block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md;
+}
+
+/* Secondary button style */
+.btn-secondary {
+  @apply px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-semibold;
+}
+
+/* Animation for detail section */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
