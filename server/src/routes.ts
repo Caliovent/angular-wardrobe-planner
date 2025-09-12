@@ -22,10 +22,13 @@ import {
     getPlanningSummary,
     updateItemWithScrapedData,
     getUserProfile,
-    updateUserBudgets
+    updateUserBudgets,
+    createItemFromImage
 } from './queries';
+import { removeBackground } from './image-processing';
 import { scrapeProductData } from './scraper';
 import authMiddleware from './authMiddleware';
+import multer from 'multer';
 import bcrypt from 'bcryptjs';
 
 
@@ -121,6 +124,26 @@ router.put('/api/user/budgets', authMiddleware, asyncHandler(async (req, res, ne
 
 
 // ---- Items API ----
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post('/api/items/upload-image', authMiddleware, upload.single('image'), asyncHandler(async (req, res, next) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded.' });
+    }
+
+    const userId = (req.user as any).userId;
+    const processedImage = await removeBackground(req.file.buffer);
+
+    const newItem = await createItemFromImage({
+        user_id: userId,
+        name: 'Nouvel article (photo)',
+        status: 'inbox',
+        image_url: processedImage,
+    });
+
+    res.status(201).json(newItem);
+}));
+
 router.get('/api/items', authMiddleware, asyncHandler(async (req, res, next) => {
     const userId = (req.user as any).userId;
     const status = req.query.status as string | undefined;

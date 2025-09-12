@@ -21,6 +21,7 @@ export class InventoryComponent {
   monthlyBudget = signal<number>(0);
   items = signal<WardrobeItem[]>([]);
   expandedItemId = signal<number | null>(null);
+  isUploading = signal(false);
 
   categoryFilter = signal<'Tous' | 'Vêtement' | 'Chaussures' | 'Parfum'>('Tous');
   priorityFilter = signal<'Tous' | 'Haute' | 'Moyenne' | 'Basse'>('Tous');
@@ -146,6 +147,29 @@ export class InventoryComponent {
         form.reset();
         (form.elements.namedItem('purchaseMonth') as HTMLInputElement).value = this.defaultMonth;
     });
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      this.isUploading.set(true);
+
+      this.apiService.uploadItemImage(file).subscribe({
+        next: (newItem) => {
+          this.items.update(currentItems => [...currentItems, newItem]);
+          this.isUploading.set(false);
+          // Reset file input
+          input.value = '';
+        },
+        error: (err) => {
+          console.error('Upload failed', err);
+          this.isUploading.set(false);
+          // Reset file input
+          input.value = '';
+        }
+      });
+    }
   }
 
   removeItem(id: number) {
