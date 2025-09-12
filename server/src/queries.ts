@@ -6,6 +6,7 @@ interface ItemRow {
     user_id: number;
     name: string;
     category: 'Vêtement' | 'Chaussures' | 'Parfum';
+    status: 'inbox' | 'planned';
     estimated_cost: string;
     actual_cost: string | null;
     priority: 'Haute' | 'Moyenne' | 'Basse';
@@ -57,9 +58,20 @@ export const createUser = async (user: any) => {
 
 
 // ---- Items ----
-export const getItems = async (userId: number) => {
+export const getItems = async (userId: number, status?: string) => {
     // We also need to fetch associated images and links for items belonging to the user
-    const itemsResult = await pool.query('SELECT * FROM Items WHERE user_id = $1 ORDER BY purchase_month ASC, priority ASC', [userId]);
+    let query = 'SELECT * FROM Items WHERE user_id = $1';
+    const values: (number | string)[] = [userId];
+
+    if (status) {
+        query += ' AND status = $2';
+        values.push(status);
+    }
+
+    query += ' ORDER BY purchase_month ASC, priority ASC';
+
+    const itemsResult = await pool.query(query, values);
+
     if (itemsResult.rows.length === 0) {
         return [];
     }
@@ -75,6 +87,7 @@ export const getItems = async (userId: number) => {
             id: item.item_id,
             name: item.name,
             category: item.category,
+            status: item.status,
             estimatedCost: item.estimated_cost,
             actualCost: item.actual_cost,
             priority: item.priority,
@@ -92,8 +105,8 @@ export const getItems = async (userId: number) => {
 export const createItem = async (item: any, userId: number) => {
     const { name, category, estimatedCost, priority, purchaseMonth } = item;
     const query = `
-        INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'planned')
         RETURNING *;
     `;
     const values = [userId, name, category, estimatedCost, priority, purchaseMonth];
@@ -104,6 +117,7 @@ export const createItem = async (item: any, userId: number) => {
         id: newItem.item_id,
         name: newItem.name,
         category: newItem.category,
+        status: newItem.status,
         estimatedCost: newItem.estimated_cost,
         actualCost: newItem.actual_cost,
         priority: newItem.priority,
@@ -137,6 +151,7 @@ export const updateItem = async (id: number, updates: any, userId: number) => {
     const fieldMapping: { [key: string]: string } = {
         name: 'name',
         category: 'category',
+        status: 'status',
         estimatedCost: 'estimated_cost',
         priority: 'priority',
         purchaseMonth: 'purchase_month',
@@ -173,6 +188,54 @@ export const updateItem = async (id: number, updates: any, userId: number) => {
 
     const result = await pool.query(query, values);
     return result.rows[0];
+};
+
+export const updateItemWithScrapedData = async (itemId: number, scrapedData: { imageUrl?: string; price?: number }) => {
+    const { imageUrl, price } = scrapedData;
+
+    if (imageUrl) {
+        const query = 'INSERT INTO Images (item_id, image_url) VALUES ($1, $2) RETURNING *;';
+        await pool.query(query, [itemId, imageUrl]);
+    }
+
+    if (price) {
+        const query = 'UPDATE Items SET estimated_cost = $1 WHERE item_id = $2;';
+        await pool.query(query, [price, itemId]);
+    }
+};
+
+// ---- Planning Summary ----
+export const getPlanningSummary = async (userId: number) => {
+    const plannedItemsWhere = 'WHERE user_id = $1 AND status = \'planned\'';
+
+    // 1. Total cost
+    const totalCostResult = await pool.query(`SELECT SUM(estimated_cost) as "totalCost" FROM Items ${plannedItemsWhere}`, [userId]);
+    const totalCost = parseFloat(totalCostResult.rows[0].totalCost) || 0;
+
+    // 2. Cost by month
+    const costByMonthResult = await pool.query(`
+        SELECT purchase_month as name, SUM(estimated_cost) as value
+        FROM Items
+        ${plannedItemsWhere}
+        GROUP BY purchase_month
+        ORDER BY purchase_month
+    `, [userId]);
+    const costByMonth = costByMonthResult.rows.map(row => ({...row, name: row.name, value: parseFloat(row.value)}));
+
+    // 3. Count by category
+    const countByCategoryResult = await pool.query(`
+        SELECT category as name, COUNT(*) as value
+        FROM Items
+        ${plannedItemsWhere}
+        GROUP BY category
+    `, [userId]);
+    const countByCategory = countByCategoryResult.rows.map(row => ({...row, name: row.name, value: parseInt(row.value, 10)}));
+
+    return {
+        totalCost,
+        costByMonth,
+        countByCategory
+    };
 };
 
 // ---- Images ----
@@ -220,8 +283,8 @@ export const createItemFromUrl = async (itemUrl: string, itemName: string, userI
         };
 
         const itemQuery = `
-      INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'inbox')
       RETURNING *;
     `;
         const itemValues = [userId, defaultItem.name, defaultItem.category, defaultItem.estimatedCost, defaultItem.priority, defaultItem.purchaseMonth];
@@ -242,6 +305,7 @@ export const createItemFromUrl = async (itemUrl: string, itemName: string, userI
             id: newItemRow.item_id,
             name: newItemRow.name,
             category: newItemRow.category,
+            status: newItemRow.status,
             estimatedCost: newItemRow.estimated_cost,
             actualCost: newItemRow.actual_cost,
             priority: newItemRow.priority,

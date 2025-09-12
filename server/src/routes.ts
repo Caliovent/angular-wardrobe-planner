@@ -13,8 +13,11 @@ import {
     createItemFromUrl,
     DuplicateItemError,
     createUser,
-    findUserByEmail
+    findUserByEmail,
+    getPlanningSummary,
+    updateItemWithScrapedData
 } from './queries';
+import { scrapeProductData } from './scraper';
 import authMiddleware from './authMiddleware';
 
 const router = express.Router();
@@ -69,8 +72,16 @@ router.post('/api/auth/login', asyncHandler(async (req, res, next) => {
 // ---- Items API ----
 router.get('/api/items', authMiddleware, asyncHandler(async (req, res, next) => {
     const userId = req.user!.id;
-    const items = await getItems(userId);
+    const status = req.query.status as string | undefined;
+    const items = await getItems(userId, status);
     res.json(items);
+}));
+
+// ---- Planning API ----
+router.get('/api/planning/summary', authMiddleware, asyncHandler(async (req, res, next) => {
+    const userId = req.user!.id;
+    const summary = await getPlanningSummary(userId);
+    res.json(summary);
 }));
 
 router.post('/api/items', authMiddleware, asyncHandler(async (req, res, next) => {
@@ -100,7 +111,21 @@ router.post('/api/items/from-url', authMiddleware, asyncHandler(async (req, res,
         return res.status(400).json({ error: 'URL and name are required' });
     }
     const newItem = await createItemFromUrl(url, name, userId);
+
+    // Respond immediately
     res.status(201).json(newItem);
+
+    // Start scraping in the background
+    scrapeProductData(url)
+        .then(scrapedData => {
+            if (scrapedData.imageUrl || scrapedData.price) {
+                // If we got data, update the item
+                updateItemWithScrapedData(newItem.id, scrapedData);
+            }
+        })
+        .catch(error => {
+            console.error(`Scraping failed for item ${newItem.id}:`, error);
+        });
 }));
 
 // ---- Images API ----

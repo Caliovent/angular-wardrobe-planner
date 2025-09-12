@@ -1,0 +1,49 @@
+<div class="container mx-auto p-4">
+  <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
+
+  <div *ngIf="summary() as s; else loading">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="bg-white p-4 rounded-lg shadow text-center">
+        <h3 class="text-lg font-semibold text-gray-700">Total Estimated Cost</h3>
+        <p class="text-3xl font-bold text-blue-600">{{ s.totalCost | currency:'EUR' }}</p>
+      </div>
+    </div>
+
+    <div *ngIf="s.costByMonth.length > 0" class="bg-white p-4 rounded-lg shadow mb-8">
+      <h3 class="text-xl font-bold mb-4">Cost by Month</h3>
+      <ngx-charts-bar-vertical
+        [view]="view"
+        [scheme]="colorScheme"
+        [results]="s.costByMonth"
+        [gradient]="gradient"
+        [xAxis]="showXAxis"
+        [yAxis]="showYAxis"
+        [legend]="showLegend"
+        [showXAxisLabel]="showXAxisLabel"
+        [showYAxisLabel]="showYAxisLabel"
+        [xAxisLabel]="xAxisLabel"
+        [yAxisLabel]="yAxisLabel">
+      </ngx-charts-bar-vertical>
+    </div>
+
+    <div *ngIf="s.countByCategory.length > 0" class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-xl font-bold mb-4">Items by Category</h3>
+      <ngx-charts-pie-chart
+        [view]="view"
+        [scheme]="colorScheme"
+        [results]="s.countByCategory"
+        [legend]="showLegend"
+        [labels]="true"
+        [doughnut]="false">
+      </ngx-charts-pie-chart>
+    </div>
+
+    <div *ngIf="s.costByMonth.length === 0 && s.countByCategory.length === 0" class="text-gray-500">
+      No planned items to display in dashboard.
+    </div>
+  </div>
+
+  <ng-template #loading>
+    <p>Loading dashboard data...</p>
+  </ng-template>
+</div>
