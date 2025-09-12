@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgxChartsModule } from '@swimlane/ngx-charts';
+import { Color, ScaleType, NgxChartsModule } from '@swimlane/ngx-charts';
 import { ApiService } from '../api.service';
 import { PlanningSummary } from '../models';
 
@@ -26,7 +26,10 @@ export class DashboardComponent implements OnInit {
   showYAxisLabel = true;
   yAxisLabel = 'Cost';
 
-  colorScheme = {
+  colorScheme: Color = {
+    name: 'custom',
+    selectable: true,
+    group: ScaleType.Ordinal,
     domain: ['#5AA454', '#A10A28', '#C7B42C', '#AAAAAA']
   };
 
