@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly JWT_TOKEN = 'jwt_token';
+  private readonly JWT_TOKEN = 'authToken';
   private readonly COOKIE_NAME = 'auth_token';
   isLoggedIn = signal<boolean>(this.hasToken());
 
