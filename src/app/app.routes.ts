@@ -22,7 +22,7 @@ export const routes: Routes = [
     canActivate: [authGuard] // Protéger la route
   },
   {
-    path: 'dashboard',
+    path: 'planning/summary',
     component: DashboardComponent,
     canActivate: [authGuard] // Protéger la route
   },

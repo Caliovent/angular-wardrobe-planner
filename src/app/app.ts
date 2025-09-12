@@ -16,7 +16,7 @@ import { AuthService } from './auth.service';
           Bonjour, {{ authService.user()?.name }}
         </span>
         <a routerLink="/inbox" class="text-white mr-4">Inbox</a>
-        <a routerLink="/dashboard" class="text-white mr-4">Dashboard</a>
+        <a routerLink="/planning/summary" class="text-white mr-4">Dashboard</a>
         <a routerLink="/inventory" class="text-white mr-4">Inventaire</a>
         <button (click)="logout()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
           Logout
