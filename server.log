@@ -1,5 +1,0 @@
-
-> garde-robe-budget-app@0.0.0 dev:server
-> nodemon --watch server/src -e ts --exec ts-node server/src/index.ts
-
-sh: 1: nodemon: not found
