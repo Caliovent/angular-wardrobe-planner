@@ -39,6 +39,16 @@ router.put('/api/items/:id', asyncHandler((req, res, next) => __awaiter(void 0, 
     const updatedItem = yield (0, queries_1.updateItem)(Number(req.params.id), req.body);
     res.json(updatedItem);
 })));
+// ---- New Route for Browser Extension ----
+router.post('/api/items/from-url', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { url, name } = req.body;
+    // Basic validation
+    if (!url || !name) {
+        return res.status(400).json({ error: 'URL and name are required' });
+    }
+    const newItem = yield (0, queries_1.createItemFromUrl)(url, name);
+    res.status(201).json(newItem);
+})));
 // ---- Images API ----
 router.post('/api/items/:id/images', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { imageUrl } = req.body;

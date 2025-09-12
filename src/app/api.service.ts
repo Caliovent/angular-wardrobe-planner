@@ -42,4 +42,8 @@ export class ApiService {
   removeLink(itemId: number, linkId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/items/${itemId}/links/${linkId}`);
   }
+
+  createItemFromUrl(url: string, name: string): Observable<WardrobeItem> {
+    return this.http.post<WardrobeItem>(`${this.apiUrl}/items/from-url`, { url, name });
+  }
 }

@@ -149,6 +149,64 @@ export const removeImageUrl = async (itemId: number, imageUrl: string) => {
 }
 
 // ---- Links ----
+export const createItemFromUrl = async (itemUrl: string, itemName: string) => {
+  // Begin a transaction
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Create a new item with default values
+    const user_id = 1; // Placeholder for user authentication
+    const defaultItem = {
+      name: itemName,
+      category: 'Vêtement', // Default category, user can change it later
+      estimatedCost: 0,    // Default cost
+      priority: 'Moyenne', // Default priority
+      purchaseMonth: new Date().toISOString().slice(0, 7) // Default to current month
+    };
+
+    const itemQuery = `
+      INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const itemValues = [user_id, defaultItem.name, defaultItem.category, defaultItem.estimatedCost, defaultItem.priority, defaultItem.purchaseMonth];
+    const itemResult = await client.query(itemQuery, itemValues);
+    const newItemRow = itemResult.rows[0];
+
+    // 2. Add the provided URL as a link to this new item
+    const linkQuery = 'INSERT INTO Links (item_id, url, annotation) VALUES ($1, $2, $3) RETURNING *;';
+    const linkValues = [newItemRow.item_id, itemUrl, 'Lien principal'];
+    const linkResult = await client.query(linkQuery, linkValues);
+    const newLink = linkResult.rows[0];
+
+    // Commit the transaction
+    await client.query('COMMIT');
+
+    // 3. Return the newly created item in the expected format
+    return {
+      id: newItemRow.item_id,
+      name: newItemRow.name,
+      category: newItemRow.category,
+      estimatedCost: newItemRow.estimated_cost,
+      actualCost: newItemRow.actual_cost,
+      priority: newItemRow.priority,
+      purchaseMonth: newItemRow.purchase_month,
+      isPurchased: newItemRow.is_purchased,
+      notes: newItemRow.notes,
+      rating: newItemRow.rating,
+      imageUrls: [],
+      links: [{ id: newLink.link_id, url: newLink.url, annotation: newLink.annotation }],
+    };
+
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+};
+
 export const addLink = async (itemId: number, link: any) => {
     const { url, annotation } = link;
     const query = 'INSERT INTO Links (item_id, url, annotation) VALUES ($1, $2, $3) RETURNING *;';
