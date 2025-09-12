@@ -8,25 +8,22 @@ import { AuthService } from './auth.service';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <nav class="bg-gray-800 p-4">
-      <div class="container mx-auto flex justify-between items-center">
-        <a routerLink="/" class="text-white text-lg font-bold">Garde-Robe Budget App</a>
-        <div>
-          <ng-container *ngIf="authService.isLoggedIn(); else loggedOut">
-            <a routerLink="/inbox" class="text-white mr-4">Inbox</a>
-            <a routerLink="/dashboard" class="text-white mr-4">Dashboard</a>
-            <button (click)="logout()" class="text-white">Logout</button>
-          </ng-container>
-          <ng-template #loggedOut>
-            <a routerLink="/login" class="text-white mr-4">Login</a>
-            <a routerLink="/register" class="text-white">Register</a>
-          </ng-template>
-        </div>
-      </div>
-    </nav>
-    <main class="p-4">
-      <router-outlet></router-outlet>
-    </main>
+<nav *ngIf="authService.isLoggedIn()" class="bg-gray-800 p-4">
+  <div class="container mx-auto flex justify-between items-center">
+    <a routerLink="/inventory" class="text-white text-lg font-bold">Wardrobe Planner</a>
+    <div>
+        <a routerLink="/inbox" class="text-white mr-4">Inbox</a>
+        <a routerLink="/dashboard" class="text-white mr-4">Dashboard</a>
+        <a routerLink="/inventory" class="text-white mr-4">Inventaire</a>
+        <button (click)="logout()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+          Logout
+        </button>
+    </div>
+  </div>
+</nav>
+<main class="p-4">
+  <router-outlet></router-outlet>
+</main>
   `,
 })
 export class App {
@@ -36,6 +33,6 @@ export class App {
 
   logout(): void {
     this.authService.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/']);
   }
 }

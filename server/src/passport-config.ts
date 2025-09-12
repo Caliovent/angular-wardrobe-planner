@@ -17,29 +17,23 @@ passport.use(
       const avatarUrl = photos?.[0].value;
 
       try {
-        let userResult = await pool.query('SELECT * FROM "users" WHERE google_id = $1', [id]);
-        let user = userResult.rows[0];
-
-        if (!user && email) {
-          userResult = await pool.query('SELECT * FROM "users" WHERE email = $1', [email]);
-          user = userResult.rows[0];
-          if (user) {
-            const updateResult = await pool.query(
-              'UPDATE "users" SET google_id = $1, display_name = $2, avatar_url = $3 WHERE user_id = $4 RETURNING *',
-              [id, displayName, avatarUrl, user.user_id]
-            );
-            user = updateResult.rows[0];
-          }
+        if (!email) {
+          return done(new Error("No email provided by Google."), undefined);
         }
 
-        if (!user) {
-          if (!email) return done(new Error("Aucun email fourni par Google."), undefined);
-          const newUserResult = await pool.query(
-            'INSERT INTO "users" (google_id, email, display_name, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [id, email, displayName, avatarUrl]
-          );
-          user = newUserResult.rows[0];
-        }
+        const query = `
+          INSERT INTO "users" (google_id, email, display_name, avatar_url)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (email) DO UPDATE SET
+            google_id = EXCLUDED.google_id,
+            display_name = EXCLUDED.display_name,
+            avatar_url = EXCLUDED.avatar_url
+          RETURNING *;
+        `;
+
+        const values = [id, email, displayName, avatarUrl];
+        const result = await pool.query(query, values);
+        const user = result.rows[0];
 
         return done(null, user);
       } catch (err) {

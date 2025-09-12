@@ -4,10 +4,13 @@ CREATE TYPE item_priority AS ENUM ('Haute', 'Moyenne', 'Basse');
 CREATE TYPE item_status AS ENUM ('inbox', 'planned');
 
 -- Table: Users
-CREATE TABLE Users (
+CREATE TABLE "users" (
     user_id SERIAL PRIMARY KEY,
+    google_id VARCHAR(255) UNIQUE,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
+    display_name VARCHAR(255),
+    avatar_url TEXT,
     total_budget DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     monthly_budget DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
