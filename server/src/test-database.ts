@@ -23,11 +23,6 @@ export const initTestDb = async () => {
         await client.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
         // Re-create types and tables
         await client.query(schemaSql);
-        // Add a dummy user for testing purposes
-        await client.query(`
-            INSERT INTO Users (user_id, email, password_hash)
-            VALUES (1, 'test@example.com', 'password');
-        `);
     } finally {
         client.release();
     }
@@ -38,11 +33,6 @@ export const clearTestDb = async () => {
     try {
         // Truncating is faster than dropping and recreating tables
         await client.query('TRUNCATE Users, Items, Images, Links RESTART IDENTITY CASCADE;');
-        // Re-add the dummy user after truncating
-        await client.query(`
-            INSERT INTO Users (user_id, email, password_hash)
-            VALUES (1, 'test@example.com', 'password');
-        `);
     } finally {
         client.release();
     }

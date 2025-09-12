@@ -1,4 +1,5 @@
 import pool from './database';
+import bcrypt from 'bcryptjs';
 
 interface ItemRow {
     item_id: number;
@@ -28,12 +29,44 @@ interface LinkRow {
     annotation: string;
 }
 
+interface UserRow {
+    user_id: number;
+    email: string;
+    password_hash: string;
+}
+
+// ---- Users ----
+export const findUserByEmail = async (email: string): Promise<UserRow | undefined> => {
+    const result = await pool.query<UserRow>('SELECT * FROM Users WHERE email = $1', [email]);
+    return result.rows[0];
+};
+
+export const createUser = async (user: any) => {
+    const { email, password } = user;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+    const query = `
+        INSERT INTO Users (email, password_hash)
+        VALUES ($1, $2)
+        RETURNING user_id, email;
+    `;
+    const values = [email, passwordHash];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+};
+
+
 // ---- Items ----
-export const getItems = async () => {
-    // We also need to fetch associated images and links
-    const itemsResult = await pool.query('SELECT * FROM Items ORDER BY purchase_month ASC, priority ASC');
-    const imagesResult = await pool.query('SELECT * FROM Images');
-    const linksResult = await pool.query('SELECT * FROM Links');
+export const getItems = async (userId: number) => {
+    // We also need to fetch associated images and links for items belonging to the user
+    const itemsResult = await pool.query('SELECT * FROM Items WHERE user_id = $1 ORDER BY purchase_month ASC, priority ASC', [userId]);
+    if (itemsResult.rows.length === 0) {
+        return [];
+    }
+    const itemIds = itemsResult.rows.map((item: ItemRow) => item.item_id);
+
+    const imagesResult = await pool.query('SELECT * FROM Images WHERE item_id = ANY($1::int[])', [itemIds]);
+    const linksResult = await pool.query('SELECT * FROM Links WHERE item_id = ANY($1::int[])', [itemIds]);
 
     const items = itemsResult.rows.map((item: ItemRow) => {
         const images = imagesResult.rows.filter((img: ImageRow) => img.item_id === item.item_id);
@@ -56,16 +89,14 @@ export const getItems = async () => {
     return items;
 };
 
-export const createItem = async (item: any) => {
+export const createItem = async (item: any, userId: number) => {
     const { name, category, estimatedCost, priority, purchaseMonth } = item;
-    // Assuming a default user_id for now. This should be handled with authentication later.
-    const user_id = 1;
     const query = `
         INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *;
     `;
-    const values = [user_id, name, category, estimatedCost, priority, purchaseMonth];
+    const values = [userId, name, category, estimatedCost, priority, purchaseMonth];
     const result = await pool.query(query, values);
     const newItem = result.rows[0];
     // Return the item in the same format as getItems
@@ -85,14 +116,24 @@ export const createItem = async (item: any) => {
     };
 };
 
-export const deleteItem = async (id: number) => {
+const verifyItemOwner = async (itemId: number, userId: number) => {
+    const result = await pool.query('SELECT user_id FROM Items WHERE item_id = $1', [itemId]);
+    if (result.rows.length === 0 || result.rows[0].user_id !== userId) {
+        throw new Error('Item not found or user not authorized');
+    }
+};
+
+export const deleteItem = async (id: number, userId: number) => {
+    await verifyItemOwner(id, userId);
     // We need to delete associated links and images first due to foreign key constraints
     await pool.query('DELETE FROM Images WHERE item_id = $1', [id]);
     await pool.query('DELETE FROM Links WHERE item_id = $1', [id]);
-    await pool.query('DELETE FROM Items WHERE item_id = $1', [id]);
+    await pool.query('DELETE FROM Items WHERE item_id = $1 AND user_id = $2', [id, userId]);
 };
 
-export const updateItem = async (id: number, updates: any) => {
+export const updateItem = async (id: number, updates: any, userId: number) => {
+    await verifyItemOwner(id, userId);
+
     const fieldMapping: { [key: string]: string } = {
         name: 'name',
         category: 'category',
@@ -135,13 +176,15 @@ export const updateItem = async (id: number, updates: any) => {
 };
 
 // ---- Images ----
-export const addImageUrl = async (itemId: number, imageUrl: string) => {
+export const addImageUrl = async (itemId: number, imageUrl: string, userId: number) => {
+    await verifyItemOwner(itemId, userId);
     const query = 'INSERT INTO Images (item_id, image_url) VALUES ($1, $2) RETURNING *;';
     const result = await pool.query(query, [itemId, imageUrl]);
     return result.rows[0];
 }
 
-export const removeImageUrl = async (itemId: number, imageUrl: string) => {
+export const removeImageUrl = async (itemId: number, imageUrl: string, userId: number) => {
+    await verifyItemOwner(itemId, userId);
     // This is tricky without a unique ID for the image url itself.
     // We'll delete the first match. A better schema would have a unique ID on the image row.
     const query = 'DELETE FROM Images WHERE image_id = (SELECT image_id FROM Images WHERE item_id = $1 AND image_url = $2 LIMIT 1)';
@@ -156,7 +199,7 @@ export class DuplicateItemError extends Error {
     }
 }
 
-export const createItemFromUrl = async (itemUrl: string, itemName: string) => {
+export const createItemFromUrl = async (itemUrl: string, itemName: string, userId: number) => {
     // First, check if the URL already exists.
     const existingLinkResult = await pool.query('SELECT * FROM Links WHERE url = $1', [itemUrl]);
     if (existingLinkResult.rows.length > 0) {
@@ -168,7 +211,6 @@ export const createItemFromUrl = async (itemUrl: string, itemName: string) => {
         await client.query('BEGIN');
 
         // 1. Create a new item with default values
-        const user_id = 1; // Placeholder for user authentication
         const defaultItem = {
             name: itemName,
             category: 'Vêtement', // Default category, user can change it later
@@ -182,7 +224,7 @@ export const createItemFromUrl = async (itemUrl: string, itemName: string) => {
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
-        const itemValues = [user_id, defaultItem.name, defaultItem.category, defaultItem.estimatedCost, defaultItem.priority, defaultItem.purchaseMonth];
+        const itemValues = [userId, defaultItem.name, defaultItem.category, defaultItem.estimatedCost, defaultItem.priority, defaultItem.purchaseMonth];
         const itemResult = await client.query(itemQuery, itemValues);
         const newItemRow = itemResult.rows[0];
 
@@ -219,7 +261,8 @@ export const createItemFromUrl = async (itemUrl: string, itemName: string) => {
     }
 };
 
-export const addLink = async (itemId: number, link: any) => {
+export const addLink = async (itemId: number, link: any, userId: number) => {
+    await verifyItemOwner(itemId, userId);
     const { url, annotation } = link;
     const query = 'INSERT INTO Links (item_id, url, annotation) VALUES ($1, $2, $3) RETURNING *;';
     const result = await pool.query(query, [itemId, url, annotation]);
@@ -227,6 +270,10 @@ export const addLink = async (itemId: number, link: any) => {
     return { id: newLink.link_id, url: newLink.url, annotation: newLink.annotation };
 }
 
-export const removeLink = async (linkId: number) => {
+export const removeLink = async (linkId: number, userId: number) => {
+    const linkResult = await pool.query('SELECT t.user_id FROM Links l JOIN Items t ON l.item_id = t.item_id WHERE l.link_id = $1', [linkId]);
+    if (linkResult.rows.length === 0 || linkResult.rows[0].user_id !== userId) {
+        throw new Error('Link not found or user not authorized');
+    }
     await pool.query('DELETE FROM Links WHERE link_id = $1', [linkId]);
 }
