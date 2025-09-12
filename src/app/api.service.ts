@@ -7,7 +7,7 @@ import { WardrobeItem, ItemLink } from './models';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = 'https://angular-wardrobe-planner.onrender.com/api';
 
   constructor(private http: HttpClient) { }
 
