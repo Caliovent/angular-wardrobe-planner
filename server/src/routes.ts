@@ -24,6 +24,7 @@ import {
 } from './queries';
 import { scrapeProductData } from './scraper';
 import authMiddleware from './authMiddleware';
+import bcrypt from 'bcryptjs/umd/types';
 
 
 const router = express.Router();
