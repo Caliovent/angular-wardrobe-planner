@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeLink = exports.addLink = exports.removeImageUrl = exports.addImageUrl = exports.updateItem = exports.deleteItem = exports.createItem = exports.getItems = void 0;
+exports.removeLink = exports.addLink = exports.createItemFromUrl = exports.removeImageUrl = exports.addImageUrl = exports.updateItem = exports.deleteItem = exports.createItem = exports.getItems = void 0;
 const database_1 = __importDefault(require("./database"));
 // ---- Items ----
 const getItems = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -129,6 +129,60 @@ const removeImageUrl = (itemId, imageUrl) => __awaiter(void 0, void 0, void 0, f
 });
 exports.removeImageUrl = removeImageUrl;
 // ---- Links ----
+const createItemFromUrl = (itemUrl, itemName) => __awaiter(void 0, void 0, void 0, function* () {
+    // Begin a transaction
+    const client = yield database_1.default.connect();
+    try {
+        yield client.query('BEGIN');
+        // 1. Create a new item with default values
+        const user_id = 1; // Placeholder for user authentication
+        const defaultItem = {
+            name: itemName,
+            category: 'Vêtement', // Default category, user can change it later
+            estimatedCost: 0, // Default cost
+            priority: 'Moyenne', // Default priority
+            purchaseMonth: new Date().toISOString().slice(0, 7) // Default to current month
+        };
+        const itemQuery = `
+      INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+        const itemValues = [user_id, defaultItem.name, defaultItem.category, defaultItem.estimatedCost, defaultItem.priority, defaultItem.purchaseMonth];
+        const itemResult = yield client.query(itemQuery, itemValues);
+        const newItemRow = itemResult.rows[0];
+        // 2. Add the provided URL as a link to this new item
+        const linkQuery = 'INSERT INTO Links (item_id, url, annotation) VALUES ($1, $2, $3) RETURNING *;';
+        const linkValues = [newItemRow.item_id, itemUrl, 'Lien principal'];
+        const linkResult = yield client.query(linkQuery, linkValues);
+        const newLink = linkResult.rows[0];
+        // Commit the transaction
+        yield client.query('COMMIT');
+        // 3. Return the newly created item in the expected format
+        return {
+            id: newItemRow.item_id,
+            name: newItemRow.name,
+            category: newItemRow.category,
+            estimatedCost: newItemRow.estimated_cost,
+            actualCost: newItemRow.actual_cost,
+            priority: newItemRow.priority,
+            purchaseMonth: newItemRow.purchase_month,
+            isPurchased: newItemRow.is_purchased,
+            notes: newItemRow.notes,
+            rating: newItemRow.rating,
+            imageUrls: [],
+            links: [{ id: newLink.link_id, url: newLink.url, annotation: newLink.annotation }],
+        };
+    }
+    catch (e) {
+        yield client.query('ROLLBACK');
+        throw e;
+    }
+    finally {
+        client.release();
+    }
+});
+exports.createItemFromUrl = createItemFromUrl;
 const addLink = (itemId, link) => __awaiter(void 0, void 0, void 0, function* () {
     const { url, annotation } = link;
     const query = 'INSERT INTO Links (item_id, url, annotation) VALUES ($1, $2, $3) RETURNING *;';

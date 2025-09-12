@@ -7,7 +7,8 @@ import {
     addImageUrl,
     removeImageUrl,
     addLink,
-    removeLink
+    removeLink,
+    createItemFromUrl
 } from './queries';
 
 const router = express.Router();
@@ -41,6 +42,17 @@ router.delete('/api/items/:id', asyncHandler(async (req, res, next) => {
 router.put('/api/items/:id', asyncHandler(async (req, res, next) => {
     const updatedItem = await updateItem(Number(req.params.id), req.body);
     res.json(updatedItem);
+}));
+
+// ---- New Route for Browser Extension ----
+router.post('/api/items/from-url', asyncHandler(async (req, res, next) => {
+    const { url, name } = req.body;
+    // Basic validation
+    if (!url || !name) {
+        return res.status(400).json({ error: 'URL and name are required' });
+    }
+    const newItem = await createItemFromUrl(url, name);
+    res.status(201).json(newItem);
 }));
 
 // ---- Images API ----
