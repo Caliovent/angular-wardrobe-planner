@@ -8,7 +8,8 @@ import {
     removeImageUrl,
     addLink,
     removeLink,
-    createItemFromUrl
+    createItemFromUrl,
+    DuplicateItemError
 } from './queries';
 
 const router = express.Router();
@@ -82,7 +83,10 @@ router.delete('/api/items/:id/links/:linkId', asyncHandler(async (req, res, next
 
 
 // ---- Error Handling ----
-router.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof DuplicateItemError) {
+        return res.status(409).json({ error: err.message });
+    }
     console.error(err.stack);
     res.status(500).send('Something broke!');
 });

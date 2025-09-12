@@ -3,6 +3,8 @@ import {
     getItems,
     updateItem,
     deleteItem,
+    createItemFromUrl,
+    DuplicateItemError,
 } from './queries';
 
 import pool from './database';
@@ -114,6 +116,19 @@ describe('Database Queries', () => {
 
             const { rows } = await testPool.query('SELECT * FROM Items WHERE item_id = $1', [itemToDelete.id]);
             expect(rows).toHaveLength(0);
+        });
+    });
+
+    describe('createItemFromUrl', () => {
+        it('should throw a DuplicateItemError if the URL already exists', async () => {
+            const url = 'http://example.com/item';
+            const name = 'Test Item';
+
+            // Create the item for the first time
+            await createItemFromUrl(url, name);
+
+            // Try to create it again and expect an error
+            await expect(createItemFromUrl(url, name)).rejects.toThrow(DuplicateItemError);
         });
     });
 });

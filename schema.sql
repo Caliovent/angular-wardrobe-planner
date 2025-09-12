@@ -41,7 +41,7 @@ CREATE TABLE Images (
 CREATE TABLE Links (
     link_id SERIAL PRIMARY KEY,
     item_id INT NOT NULL,
-    url TEXT NOT NULL,
+    url TEXT NOT NULL UNIQUE,
     annotation VARCHAR(255) NOT NULL,
     FOREIGN KEY (item_id) REFERENCES Items(item_id)
 );
