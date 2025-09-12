@@ -24,16 +24,16 @@ import {
 } from './queries';
 import { scrapeProductData } from './scraper';
 import authMiddleware from './authMiddleware';
-import bcrypt from 'bcryptjs/umd/types';
+import bcrypt from 'bcryptjs';
 
 
 const router = express.Router();
 
 // Routes d'authentification
-router.get('/auth/google', passport.authenticate('google', { session: false }));
+router.get('/api/auth/google', passport.authenticate('google', { session: false }));
 
 router.get(
-  '/auth/google/callback',
+  '/api/auth/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: '/login-error' }),
   (req, res) => {
     const user: any = req.user;
@@ -50,22 +50,6 @@ router.get('/', (request, response) => {
 });
 
 
-// Protéger les routes API
-router.get('/items', authMiddleware, async (req, res) => {
-    const items = await getItems((req as any).user.user_id);
-    res.json(items);
-});
-router.post('/items', authMiddleware, async (req, res) => {
-    const item = await createItem(req.body, (req as any).user.user_id);
-    res.status(201).json(item);
-});
-router.put('/items/:id', authMiddleware, async (req, res) => {
-    const item = await updateItem(parseInt(req.params.id), req.body, (req as any).user.user_id);
-    res.json(item);
-});
-router.delete('/items/:id', authMiddleware, async (req, res) => {
-    await deleteItem(parseInt(req.params.id), (req as any).user.user_id);
-});
 
 const asyncHandler = (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<any>) =>
     (req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -268,6 +268,6 @@ export class InventoryComponent {
   }
 
   loginWithGoogle(): void {
-    window.location.href = `${this.backendUrl}/auth/google`;
+    window.location.href = `${this.backendUrl}/api/auth/google`;
   }
 }
