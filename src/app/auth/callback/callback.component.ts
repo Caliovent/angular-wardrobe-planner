@@ -20,7 +20,7 @@ export class AuthCallbackComponent implements OnInit {
       const token = params['token'];
       if (token) {
         this.authService.handleGoogleAuth(token);
-        this.router.navigate(['/inventory']);
+        this.router.navigate(['/tabs/dashboard']);
       } else {
         this.router.navigate(['/']); // Rediriger vers la page d'accueil en cas d'erreur
       }
