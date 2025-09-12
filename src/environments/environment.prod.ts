@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: '__BACKEND_URL__'
+  apiUrl: 'https://angular-wardrobe-planner.onrender.com'
 };
