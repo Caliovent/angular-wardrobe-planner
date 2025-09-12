@@ -7,9 +7,17 @@ import { WardrobeItem, ItemLink } from './models';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'https://angular-wardrobe-planner.onrender.com/api';
+  private apiUrl = 'http://localhost:3000/api';
 
   constructor(private http: HttpClient) { }
+
+  register(userInfo: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/register`, userInfo);
+  }
+
+  login(credentials: any): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(`${this.apiUrl}/auth/login`, credentials);
+  }
 
   getItems(): Observable<WardrobeItem[]> {
     return this.http.get<WardrobeItem[]>(`${this.apiUrl}/items`);
