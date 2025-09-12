@@ -266,8 +266,4 @@ export class InventoryComponent {
     const date = new Date(Number(year), Number(month) - 1);
     return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   }
-
-  loginWithGoogle(): void {
-    window.location.href = `${this.backendUrl}/api/auth/google`;
-  }
 }

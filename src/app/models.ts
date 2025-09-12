@@ -26,3 +26,9 @@ export interface PlanningSummary {
   costByMonth: { name: string; value: number }[];
   countByCategory: { name: string; value: number }[];
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+}

@@ -2,6 +2,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../auth.service';
 
 @Component({
   selector: 'app-callback',
@@ -12,15 +13,16 @@ import { CommonModule } from '@angular/common';
 export class AuthCallbackComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private authService = inject(AuthService);
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       const token = params['token'];
       if (token) {
-        localStorage.setItem('authToken', token);
+        this.authService.handleGoogleAuth(token);
         this.router.navigate(['/inventory']);
       } else {
-        this.router.navigate(['/login-error']); // Optionnel: une route pour gérer les erreurs
+        this.router.navigate(['/']); // Rediriger vers la page d'accueil en cas d'erreur
       }
     });
   }
