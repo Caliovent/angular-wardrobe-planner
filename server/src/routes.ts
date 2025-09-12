@@ -195,6 +195,6 @@ router.delete('/api/items/:id/links/:linkId', authMiddleware, asyncHandler(async
     const userId = (req.user as any).user_id;
     await removeLink(Number(req.params.linkId), userId);
     res.status(204).send();
-});
+}));
 
 export default router;
