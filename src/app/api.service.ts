@@ -63,4 +63,12 @@ export class ApiService {
   getPlanningSummary(): Observable<PlanningSummary> {
     return this.http.get<PlanningSummary>(`${this.apiUrl}/planning/summary`);
   }
+
+  getUserProfile(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/user/me`);
+  }
+
+  updateUserBudgets(budgets: { totalBudget: number; monthlyBudget: number }): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/user/budgets`, budgets);
+  }
 }

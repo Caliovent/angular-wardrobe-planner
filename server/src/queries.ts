@@ -37,6 +37,28 @@ interface UserRow {
 }
 
 // ---- Users ----
+
+// Récupère les informations du profil utilisateur, y compris les budgets
+export const getUserProfile = async (userId: number) => {
+    const result = await pool.query(
+        'SELECT user_id, email, display_name, avatar_url, total_budget, monthly_budget FROM "users" WHERE user_id = $1',
+        [userId]
+    );
+    return result.rows[0];
+};
+
+// Met à jour les budgets de l'utilisateur
+export const updateUserBudgets = async (userId: number, budgets: { totalBudget?: number; monthlyBudget?: number }) => {
+    const { totalBudget, monthlyBudget } = budgets;
+    const result = await pool.query(
+        `UPDATE "users" SET total_budget = $1, monthly_budget = $2
+         WHERE user_id = $3
+         RETURNING user_id, total_budget, monthly_budget`,
+        [totalBudget, monthlyBudget, userId]
+    );
+    return result.rows[0];
+};
+
 export const findUserByEmail = async (email: string): Promise<UserRow | undefined> => {
     const result = await pool.query<UserRow>('SELECT * FROM Users WHERE email = $1', [email]);
     return result.rows[0];
