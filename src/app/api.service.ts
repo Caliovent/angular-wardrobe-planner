@@ -60,6 +60,13 @@ export class ApiService {
     return this.http.post<WardrobeItem>(`${this.apiUrl}/items/from-url`, { url, name });
   }
 
+  uploadItemImage(file: File): Observable<WardrobeItem> {
+    const formData = new FormData();
+    formData.append('image', file, file.name);
+
+    return this.http.post<WardrobeItem>(`${this.apiUrl}/items/upload-image`, formData);
+  }
+
   getPlanningSummary(): Observable<PlanningSummary> {
     return this.http.get<PlanningSummary>(`${this.apiUrl}/planning/summary`);
   }

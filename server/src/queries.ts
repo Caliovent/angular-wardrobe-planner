@@ -152,6 +152,54 @@ export const createItem = async (item: any, userId: number) => {
     };
 };
 
+export const createItemFromImage = async (item: { user_id: number; name: string; status: 'inbox'; image_url: string }) => {
+    const { user_id, name, status, image_url } = item;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const itemQuery = `
+            INSERT INTO Items (user_id, name, status, category, estimated_cost, priority, purchase_month)
+            VALUES ($1, $2, $3, 'Vêtement', 0, 'Moyenne', to_char(CURRENT_DATE, 'YYYY-MM'))
+            RETURNING *;
+        `;
+        const itemValues = [user_id, name, status];
+        const itemResult = await client.query(itemQuery, itemValues);
+        const newItem = itemResult.rows[0];
+
+        const imageQuery = `
+            INSERT INTO Images (item_id, image_url)
+            VALUES ($1, $2)
+            RETURNING *;
+        `;
+        const imageValues = [newItem.item_id, image_url];
+        await client.query(imageQuery, imageValues);
+
+        await client.query('COMMIT');
+
+        return {
+            id: newItem.item_id,
+            name: newItem.name,
+            category: newItem.category,
+            status: newItem.status,
+            estimatedCost: newItem.estimated_cost,
+            actualCost: newItem.actual_cost,
+            priority: newItem.priority,
+            purchaseMonth: newItem.purchase_month,
+            isPurchased: newItem.is_purchased,
+            notes: newItem.notes,
+            rating: newItem.rating,
+            imageUrls: [image_url],
+            links: [],
+        };
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
+    }
+};
+
 const verifyItemOwner = async (itemId: number, userId: number) => {
     const result = await pool.query('SELECT user_id FROM Items WHERE item_id = $1', [itemId]);
     if (result.rows.length === 0 || result.rows[0].user_id !== userId) {
