@@ -35,11 +35,6 @@ const initTestDb = () => __awaiter(void 0, void 0, void 0, function* () {
         yield client.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
         // Re-create types and tables
         yield client.query(schemaSql);
-        // Add a dummy user for testing purposes
-        yield client.query(`
-            INSERT INTO Users (user_id, email, password_hash)
-            VALUES (1, 'test@example.com', 'password');
-        `);
     }
     finally {
         client.release();
@@ -51,11 +46,6 @@ const clearTestDb = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Truncating is faster than dropping and recreating tables
         yield client.query('TRUNCATE Users, Items, Images, Links RESTART IDENTITY CASCADE;');
-        // Re-add the dummy user after truncating
-        yield client.query(`
-            INSERT INTO Users (user_id, email, password_hash)
-            VALUES (1, 'test@example.com', 'password');
-        `);
     }
     finally {
         client.release();

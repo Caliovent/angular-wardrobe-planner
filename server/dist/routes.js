@@ -12,67 +12,42 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// File: server/src/routes.ts
 const express_1 = __importDefault(require("express"));
+const passport_1 = __importDefault(require("passport"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const queries_1 = require("./queries");
+const auth_middleware_1 = require("./auth.middleware");
+require('./passport-config'); // Initialise la configuration Passport
 const router = express_1.default.Router();
-// ---- Main Routes ----
-router.get('/', (req, res) => {
-    res.send('Hello from the Garde-Robe Budget App backend!');
+// Routes d'authentification
+router.get('/auth/google', passport_1.default.authenticate('google', { session: false }));
+router.get('/auth/google/callback', passport_1.default.authenticate('google', { session: false, failureRedirect: '/login-error' }), (req, res) => {
+    const user = req.user;
+    const token = jsonwebtoken_1.default.sign({ id: user.user_id }, process.env.JWT_SECRET, {
+        expiresIn: '7d',
+    });
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
 });
-const asyncHandler = (fn) => (req, res, next) => {
-    return Promise.resolve(fn(req, res, next)).catch(next);
-};
-// ---- Items API ----
-router.get('/api/items', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const items = yield (0, queries_1.getItems)();
+// Routes API existantes
+router.get('/', (request, response) => {
+    response.json({ info: 'Node.js, Express, and Postgres API' });
+});
+// Protéger les routes API
+router.get('/items', auth_middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const items = yield (0, queries_1.getItems)(req.user.id);
     res.json(items);
-})));
-router.post('/api/items', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const newItem = yield (0, queries_1.createItem)(req.body);
-    res.status(201).json(newItem);
-})));
-router.delete('/api/items/:id', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, queries_1.deleteItem)(Number(req.params.id));
+}));
+router.post('/items', auth_middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const item = yield (0, queries_1.createItem)(req.body, req.user.id);
+    res.status(201).json(item);
+}));
+router.put('/items/:id', auth_middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const item = yield (0, queries_1.updateItem)(parseInt(req.params.id), req.body, req.user.id);
+    res.json(item);
+}));
+router.delete('/items/:id', auth_middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    yield (0, queries_1.deleteItem)(parseInt(req.params.id), req.user.id);
     res.status(204).send();
-})));
-router.put('/api/items/:id', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const updatedItem = yield (0, queries_1.updateItem)(Number(req.params.id), req.body);
-    res.json(updatedItem);
-})));
-// ---- New Route for Browser Extension ----
-router.post('/api/items/from-url', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { url, name } = req.body;
-    // Basic validation
-    if (!url || !name) {
-        return res.status(400).json({ error: 'URL and name are required' });
-    }
-    const newItem = yield (0, queries_1.createItemFromUrl)(url, name);
-    res.status(201).json(newItem);
-})));
-// ---- Images API ----
-router.post('/api/items/:id/images', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { imageUrl } = req.body;
-    const newImage = yield (0, queries_1.addImageUrl)(Number(req.params.id), imageUrl);
-    res.status(201).json(newImage);
-})));
-router.delete('/api/items/:id/images', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    // The image URL to delete should be passed in the body
-    const { imageUrl } = req.body;
-    yield (0, queries_1.removeImageUrl)(Number(req.params.id), imageUrl);
-    res.status(204).send();
-})));
-// ---- Links API ----
-router.post('/api/items/:id/links', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const newLink = yield (0, queries_1.addLink)(Number(req.params.id), req.body);
-    res.status(201).json(newLink);
-})));
-router.delete('/api/items/:id/links/:linkId', asyncHandler((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    yield (0, queries_1.removeLink)(Number(req.params.linkId));
-    res.status(204).send();
-})));
-// ---- Error Handling ----
-router.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
-});
+}));
 exports.default = router;
