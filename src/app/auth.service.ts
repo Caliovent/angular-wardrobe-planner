@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import { tap } from 'rxjs/operators';
 import { Observable } from 'rxjs';
+import { User } from './models';
 
 @Injectable({
   providedIn: 'root'
@@ -9,9 +10,49 @@ import { Observable } from 'rxjs';
 export class AuthService {
   private readonly JWT_TOKEN = 'authToken';
   private readonly COOKIE_NAME = 'auth_token';
-  isLoggedIn = signal<boolean>(this.hasToken());
+  isLoggedIn = signal<boolean>(false);
+  user = signal<User | null>(null);
 
-  constructor(private apiService: ApiService) { }
+  constructor(private apiService: ApiService) {
+    this.loadToken();
+  }
+
+  private loadToken(): void {
+    const token = this.getToken();
+    if (token) {
+      this.updateStateWithToken(token);
+    }
+  }
+
+  private updateStateWithToken(token: string): void {
+    const user = this.decodeToken(token);
+    this.user.set(user);
+    this.isLoggedIn.set(true);
+    this.saveToken(token);
+  }
+
+  handleGoogleAuth(token: string): void {
+    this.updateStateWithToken(token);
+  }
+
+  private decodeToken(token: string): User | null {
+    if (typeof atob === 'undefined') {
+      return null;
+    }
+    try {
+      const payload = token.split('.')[1];
+      const decodedPayload = atob(payload);
+      const parsedPayload = JSON.parse(decodedPayload);
+      return {
+        id: parsedPayload.sub,
+        name: parsedPayload.name,
+        email: parsedPayload.email
+      };
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  }
 
   private setCookie(name: string, value: string, days: number): void {
     if (typeof document === 'undefined') return;
@@ -31,11 +72,6 @@ export class AuthService {
     document.cookie = name + '=; Max-Age=-99999999; path=/; domain=localhost';
   }
 
-  private hasToken(): boolean {
-    if (typeof localStorage === 'undefined') return false;
-    return !!localStorage.getItem(this.JWT_TOKEN);
-  }
-
   getToken(): string | null {
     if (typeof localStorage === 'undefined') return null;
     return localStorage.getItem(this.JWT_TOKEN);
@@ -45,7 +81,6 @@ export class AuthService {
     if (typeof localStorage === 'undefined') return;
     localStorage.setItem(this.JWT_TOKEN, token);
     this.setCookie(this.COOKIE_NAME, token, 7); // Save cookie for 7 days
-    this.isLoggedIn.set(true);
   }
 
   logout(): void {
@@ -53,6 +88,7 @@ export class AuthService {
     localStorage.removeItem(this.JWT_TOKEN);
     this.deleteCookie(this.COOKIE_NAME);
     this.isLoggedIn.set(false);
+    this.user.set(null);
   }
 
   register(userInfo: any): Observable<any> {

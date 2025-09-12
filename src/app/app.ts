@@ -11,7 +11,10 @@ import { AuthService } from './auth.service';
 <nav *ngIf="authService.isLoggedIn()" class="bg-gray-800 p-4">
   <div class="container mx-auto flex justify-between items-center">
     <a routerLink="/inventory" class="text-white text-lg font-bold">Wardrobe Planner</a>
-    <div>
+    <div class="flex items-center">
+        <span *ngIf="authService.user()" class="text-white mr-4">
+          Bonjour, {{ authService.user()?.name }}
+        </span>
         <a routerLink="/inbox" class="text-white mr-4">Inbox</a>
         <a routerLink="/dashboard" class="text-white mr-4">Dashboard</a>
         <a routerLink="/inventory" class="text-white mr-4">Inventaire</a>
