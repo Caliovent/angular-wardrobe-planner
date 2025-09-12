@@ -3,7 +3,7 @@
   "name": "Wardrobe Planner",
   "version": "1.0",
   "description": "Sauvegarder des articles dans votre planificateur de garde-robe.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "notifications"],
   "action": {
     "default_icon": "icon48.png",
     "default_title": "Sauvegarder l'article"
