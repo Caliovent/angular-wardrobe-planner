@@ -13,6 +13,8 @@ import { AuthService } from './auth.service';
         <a routerLink="/" class="text-white text-lg font-bold">Garde-Robe Budget App</a>
         <div>
           <ng-container *ngIf="authService.isLoggedIn(); else loggedOut">
+            <a routerLink="/inbox" class="text-white mr-4">Inbox</a>
+            <a routerLink="/dashboard" class="text-white mr-4">Dashboard</a>
             <button (click)="logout()" class="text-white">Logout</button>
           </ng-container>
           <ng-template #loggedOut>

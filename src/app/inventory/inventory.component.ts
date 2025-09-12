@@ -125,6 +125,7 @@ export class InventoryComponent {
     const newItem = {
       name: formData.get('name') as string,
       category: formData.get('category') as 'Vêtement' | 'Chaussures' | 'Parfum',
+      status: 'planned' as const,
       estimatedCost: Number(formData.get('estimatedCost')),
       priority: formData.get('priority') as 'Haute' | 'Moyenne' | 'Basse',
       purchaseMonth: formData.get('purchaseMonth') as string,
