@@ -37,7 +37,7 @@ router.get(
   passport.authenticate('google', { session: false, failureRedirect: '/login-error' }),
   (req, res) => {
     const user: any = req.user;
-    const token = jwt.sign({ id: user.user_id }, process.env.JWT_SECRET!, {
+    const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET!, {
       expiresIn: '7d',
     });
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
@@ -52,19 +52,20 @@ router.get('/', (request, response) => {
 
 // Protéger les routes API
 router.get('/items', authMiddleware, async (req, res) => {
-    const items = await getItems((req as any).user.id);
+    const items = await getItems((req as any).user.user_id);
     res.json(items);
 });
 router.post('/items', authMiddleware, async (req, res) => {
-    const item = await createItem(req.body, (req as any).user.id);
+    const item = await createItem(req.body, (req as any).user.user_id);
     res.status(201).json(item);
 });
 router.put('/items/:id', authMiddleware, async (req, res) => {
-    const item = await updateItem(parseInt(req.params.id), req.body, (req as any).user.id);
+    const item = await updateItem(parseInt(req.params.id), req.body, (req as any).user.user_id);
     res.json(item);
 });
 router.delete('/items/:id', authMiddleware, async (req, res) => {
-    await deleteItem(parseInt(req.params.id), (req as any).user.id);
+    await deleteItem(parseInt(req.params.id), (req as any).user.user_id);
+});
 
 const asyncHandler = (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<any>) =>
     (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -110,7 +111,7 @@ router.post('/api/auth/login', asyncHandler(async (req, res, next) => {
 
 // ---- Items API ----
 router.get('/api/items', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const status = req.query.status as string | undefined;
     const items = await getItems(userId, status);
     res.json(items);
@@ -118,32 +119,32 @@ router.get('/api/items', authMiddleware, asyncHandler(async (req, res, next) => 
 
 // ---- Planning API ----
 router.get('/api/planning/summary', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const summary = await getPlanningSummary(userId);
     res.json(summary);
 }));
 
 router.post('/api/items', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const newItem = await createItem(req.body, userId);
     res.status(201).json(newItem);
 }));
 
 router.delete('/api/items/:id', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     await deleteItem(Number(req.params.id), userId);
     res.status(204).send();
 }));
 
 router.put('/api/items/:id', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const updatedItem = await updateItem(Number(req.params.id), req.body, userId);
     res.json(updatedItem);
 }));
 
 // ---- New Route for Browser Extension ----
 router.post('/api/items/from-url', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const { url, name } = req.body;
     // Basic validation
     if (!url || !name) {
@@ -169,14 +170,14 @@ router.post('/api/items/from-url', authMiddleware, asyncHandler(async (req, res,
 
 // ---- Images API ----
 router.post('/api/items/:id/images', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const { imageUrl } = req.body;
     const newImage = await addImageUrl(Number(req.params.id), imageUrl, userId);
     res.status(201).json(newImage);
 }));
 
 router.delete('/api/items/:id/images', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     // The image URL to delete should be passed in the body
     const { imageUrl } = req.body;
     await removeImageUrl(Number(req.params.id), imageUrl, userId);
@@ -185,13 +186,13 @@ router.delete('/api/items/:id/images', authMiddleware, asyncHandler(async (req, 
 
 // ---- Links API ----
 router.post('/api/items/:id/links', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     const newLink = await addLink(Number(req.params.id), req.body, userId);
     res.status(201).json(newLink);
 }));
 
 router.delete('/api/items/:id/links/:linkId', authMiddleware, asyncHandler(async (req, res, next) => {
-    const userId = req.user!.id;
+    const userId = (req.user as any).user_id;
     await removeLink(Number(req.params.linkId), userId);
     res.status(204).send();
 });
