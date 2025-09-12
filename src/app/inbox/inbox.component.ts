@@ -4,10 +4,12 @@ import { ApiService } from '../api.service';
 import { WardrobeItem } from '../models';
 import { FormsModule } from '@angular/forms';
 
+import { IonicModule } from '@ionic/angular';
+
 @Component({
   selector: 'app-inbox',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IonicModule],
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.css'
 })

@@ -4,17 +4,21 @@ import { WardrobeItem, ItemLink } from '../models';
 import { ApiService } from '../api.service';
 import { debounceTime, switchMap, tap } from 'rxjs/operators';
 import { Subject } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { IonicModule, AlertController } from '@ionic/angular';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 @Component({
   selector: 'app-inventory',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IonicModule, FormsModule],
   templateUrl: './inventory.component.html',
   styleUrls: ['./inventory.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InventoryComponent {
   private apiService = inject(ApiService);
+  private alertController = inject(AlertController);
 
   // -- State Management with Signals --
   totalBudget = signal<number>(0);
@@ -118,12 +122,12 @@ export class InventoryComponent {
   }
 
   // -- Methods for interactions --
-  updateTotalBudget(event: Event) {
+  updateTotalBudget(event: any) {
     const value = (event.target as HTMLInputElement).value;
     this.totalBudget.set(Number(value) || 0);
   }
 
-  updateMonthlyBudget(event: Event) {
+  updateMonthlyBudget(event: any) {
     const value = (event.target as HTMLInputElement).value;
     this.monthlyBudget.set(Number(value) || 0);
   }
@@ -149,6 +153,44 @@ export class InventoryComponent {
     });
   }
 
+  async takePicture() {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (image.dataUrl) {
+        this.isUploading.set(true);
+
+        // Convert data URL to Blob
+        const response = await fetch(image.dataUrl);
+        const blob = await response.blob();
+
+        // Create a File object
+        const fileName = `photo_${new Date().getTime()}.jpeg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+        // Now, call the API with the file
+        this.apiService.uploadItemImage(file).subscribe({
+          next: (newItem) => {
+            this.items.update((currentItems) => [...currentItems, newItem]);
+            this.isUploading.set(false);
+          },
+          error: (err) => {
+            console.error('Upload failed', err);
+            this.isUploading.set(false);
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error taking picture', error);
+      this.isUploading.set(false); // Ensure isUploading is reset on error
+    }
+  }
+
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
@@ -172,6 +214,28 @@ export class InventoryComponent {
     }
   }
 
+  async confirmRemoveItem(id: number, name: string) {
+    const alert = await this.alertController.create({
+      header: 'Confirmer la suppression',
+      message: `Êtes-vous sûr de vouloir supprimer l'article "${name}" ?`,
+      buttons: [
+        {
+          text: 'Annuler',
+          role: 'cancel',
+        },
+        {
+          text: 'Supprimer',
+          role: 'destructive',
+          handler: () => {
+            this.removeItem(id);
+          },
+        },
+      ],
+    });
+
+    await alert.present();
+  }
+
   removeItem(id: number) {
     this.apiService.deleteItem(id).subscribe(() => {
         this.items.update(items => items.filter(item => item.id !== id));
@@ -190,7 +254,7 @@ export class InventoryComponent {
     });
   }
 
-  updateActualCost(id: number, event: Event) {
+  updateActualCost(id: number, event: any) {
     const value = (event.target as HTMLInputElement).value;
     const cost = value === '' ? undefined : Number(value);
 
@@ -209,7 +273,7 @@ export class InventoryComponent {
     this.ratingUpdate$.next({ id, rating });
   }
 
-  updateNotes(id: number, event: Event) {
+  updateNotes(id: number, event: any) {
     const notes = (event.target as HTMLTextAreaElement).value;
     this.items.update(items => items.map(item => item.id === id ? { ...item, notes } : item));
     this.notesUpdate$.next({ id, notes });
@@ -278,18 +342,18 @@ export class InventoryComponent {
      });
   }
 
-  filterByCategory(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as 'Tous' | 'Vêtement' | 'Chaussures' | 'Parfum';
+  filterByCategory(event: any) {
+    const value = event.detail.value as 'Tous' | 'Vêtement' | 'Chaussures' | 'Parfum';
     this.categoryFilter.set(value);
   }
 
-  filterByPriority(event: Event) {
-      const value = (event.target as HTMLSelectElement).value as 'Tous' | 'Haute' | 'Moyenne' | 'Basse';
+  filterByPriority(event: any) {
+      const value = event.detail.value as 'Tous' | 'Haute' | 'Moyenne' | 'Basse';
       this.priorityFilter.set(value);
   }
 
-  sortBy(event: Event) {
-      const value = (event.target as HTMLSelectElement).value as 'month' | 'cost_desc' | 'cost_asc';
+  sortBy(event: any) {
+      const value = event.detail.value as 'month' | 'cost_desc' | 'cost_asc';
       this.sortOption.set(value);
   }
 

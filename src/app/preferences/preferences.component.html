@@ -1,25 +1,41 @@
-<div class="container mx-auto max-w-2xl p-4">
-  <h2 class="text-2xl font-bold mb-6">Mes Préférences</h2>
-  <div class="bg-white p-6 rounded-lg shadow-lg">
-    <form [formGroup]="preferencesForm" (ngSubmit)="savePreferences()">
-      <h3 class="text-xl font-semibold mb-4 border-b pb-2">Budgets</h3>
-      <div class="space-y-4">
-        <div>
-          <label for="totalBudget" class="block text-sm font-medium text-gray-700">Budget Total (€)</label>
-          <input type="number" id="totalBudget" formControlName="totalBudget" class="input-style" />
-        </div>
-        <div>
-          <label for="monthlyBudget" class="block text-sm font-medium text-gray-700">Budget Mensuel Cible (€)</label>
-          <input type="number" id="monthlyBudget" formControlName="monthlyBudget" class="input-style" />
-        </div>
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/inventory"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Préférences</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="preferencesForm" (ngSubmit)="savePreferences()">
+    <ion-list>
+      <ion-list-header>
+        <ion-label>Budgets</ion-label>
+      </ion-list-header>
+      <ion-item>
+        <ion-input label="Budget Total (€)" labelPlacement="stacked" type="number" formControlName="totalBudget"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input label="Budget Mensuel Cible (€)" labelPlacement="stacked" type="number" formControlName="monthlyBudget"></ion-input>
+      </ion-item>
+    </ion-list>
+
+    <div class="ion-padding-top">
+      <ion-button type="submit" [disabled]="!preferencesForm.dirty" expand="block">
+        Sauvegarder
+        <ion-icon slot="end" name="save-outline"></ion-icon>
+      </ion-button>
+      <div *ngIf="saveStatus" class="ion-text-center ion-padding-top">
+        <ion-note>{{ saveStatus }}</ion-note>
       </div>
-      <div class="mt-6 flex items-center justify-end">
-          <span *ngIf="saveStatus" class="text-sm text-gray-600 mr-4">{{ saveStatus }}</span>
-          <button type="submit" [disabled]="!preferencesForm.dirty"
-                  class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-300 disabled:bg-gray-400">
-            Sauvegarder
-          </button>
-      </div>
-    </form>
+    </div>
+  </form>
+
+  <div class="ion-padding-top">
+     <ion-button (click)="logout()" expand="block" color="danger" fill="outline">
+        <ion-icon slot="start" name="log-out-outline"></ion-icon>
+        Déconnexion
+      </ion-button>
   </div>
-</div>
+</ion-content>

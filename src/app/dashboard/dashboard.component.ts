@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Color, ScaleType, NgxChartsModule } from '@swimlane/ngx-charts';
 import { ApiService } from '../api.service';
 import { PlanningSummary } from '../models';
+import { IonicModule } from '@ionic/angular';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgxChartsModule],
+  imports: [CommonModule, NgxChartsModule, IonicModule],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
