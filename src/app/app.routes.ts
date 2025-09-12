@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 import { InventoryComponent } from './inventory/inventory.component';
 
 import { AuthCallbackComponent } from './auth/callback/callback.component';
-
+import { PreferencesComponent } from './preferences/preferences.component';
 import { InboxComponent } from './inbox/inbox.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { HomeComponent } from './home/home.component'; // Importer le nouveau composant
@@ -25,6 +25,11 @@ export const routes: Routes = [
     path: 'planning/summary',
     component: DashboardComponent,
     canActivate: [authGuard] // Protéger la route
+  },
+  {
+    path: 'preferences',
+    component: PreferencesComponent,
+    canActivate: [authGuard]
   },
   { path: 'auth/callback', component: AuthCallbackComponent },
   { path: '**', redirectTo: '', pathMatch: 'full' } // Redirection pour les routes inconnues

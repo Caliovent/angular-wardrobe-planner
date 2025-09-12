@@ -20,7 +20,9 @@ import {
     createUser,
     findUserByEmail,
     getPlanningSummary,
-    updateItemWithScrapedData
+    updateItemWithScrapedData,
+    getUserProfile,
+    updateUserBudgets
 } from './queries';
 import { scrapeProductData } from './scraper';
 import authMiddleware from './authMiddleware';
@@ -37,9 +39,15 @@ router.get(
   passport.authenticate('google', { session: false, failureRedirect: '/login-error' }),
   (req, res) => {
     const user: any = req.user;
-    const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET!, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      {
+        userId: user.user_id,
+        name: user.display_name,
+        email: user.email
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
   }
 );
@@ -90,6 +98,25 @@ router.post('/api/auth/login', asyncHandler(async (req, res, next) => {
 
     const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
     res.json({ token });
+}));
+
+
+// Route pour récupérer les informations de l'utilisateur connecté
+router.get('/api/user/me', authMiddleware, asyncHandler(async (req, res, next) => {
+    const userId = (req as any).user.userId;
+    const profile = await getUserProfile(userId);
+    if (!profile) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+    res.json(profile);
+}));
+
+// Route pour mettre à jour les budgets de l'utilisateur
+router.put('/api/user/budgets', authMiddleware, asyncHandler(async (req, res, next) => {
+    const userId = (req as any).user.userId;
+    const { totalBudget, monthlyBudget } = req.body;
+    const updatedBudgets = await updateUserBudgets(userId, { totalBudget, monthlyBudget });
+    res.json(updatedBudgets);
 }));
 
 

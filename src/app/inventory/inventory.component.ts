@@ -17,8 +17,8 @@ export class InventoryComponent {
   private apiService = inject(ApiService);
 
   // -- State Management with Signals --
-  totalBudget = signal<number>(1000); // Default value, will be loaded
-  monthlyBudget = signal<number>(500); // Default value, will be loaded
+  totalBudget = signal<number>(0);
+  monthlyBudget = signal<number>(0);
   items = signal<WardrobeItem[]>([]);
   expandedItemId = signal<number | null>(null);
 
@@ -79,7 +79,17 @@ export class InventoryComponent {
 
   constructor() {
     this.loadInitialData();
+    this.loadBudgets(); // <-- AJOUTER CET APPEL
     this.setupDebouncedUpdates();
+  }
+
+  private loadBudgets() {
+    this.apiService.getUserProfile().subscribe(profile => {
+      if (profile) {
+        this.totalBudget.set(profile.total_budget || 0);
+        this.monthlyBudget.set(profile.monthly_budget || 0);
+      }
+    });
   }
 
   private loadInitialData() {

@@ -15,6 +15,7 @@ import { AuthService } from './auth.service';
         <span *ngIf="authService.user()" class="text-white mr-4">
           Bonjour, {{ authService.user()?.name }}
         </span>
+        <a routerLink="/preferences" class="text-white mr-4">Préférences</a>
         <a routerLink="/inbox" class="text-white mr-4">Inbox</a>
         <a routerLink="/planning/summary" class="text-white mr-4">Dashboard</a>
         <a routerLink="/inventory" class="text-white mr-4">Inventaire</a>
