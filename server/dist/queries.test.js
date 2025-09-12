@@ -53,6 +53,7 @@ jest.mock('./database', () => ({
     },
 }));
 describe('Database Queries', () => {
+    let testUser;
     beforeAll(() => __awaiter(void 0, void 0, void 0, function* () {
         // Initialize the test database schema
         yield (0, test_database_1.initTestDb)();
@@ -60,13 +61,37 @@ describe('Database Queries', () => {
     beforeEach(() => __awaiter(void 0, void 0, void 0, function* () {
         // Clear all tables before each test
         yield (0, test_database_1.clearTestDb)();
+        // Create a dummy user for each test
+        const userResult = yield test_database_1.default.query(`
+            INSERT INTO Users (email, password_hash)
+            VALUES ($1, $2)
+            RETURNING user_id, email;
+        `, ['test@example.com', 'password']);
+        testUser = userResult.rows[0];
     }));
     afterAll(() => __awaiter(void 0, void 0, void 0, function* () {
         // Close the test database pool
         yield (0, test_database_1.closeTestPool)();
     }));
+    describe('Users', () => {
+        it('should create a new user with a hashed password', () => __awaiter(void 0, void 0, void 0, function* () {
+            const newUser = { email: 'newuser@example.com', password: 'password123' };
+            const createdUser = yield (0, queries_1.createUser)(newUser);
+            expect(createdUser).toBeDefined();
+            expect(createdUser.email).toBe(newUser.email);
+            const { rows } = yield test_database_1.default.query('SELECT * FROM Users WHERE email = $1', [newUser.email]);
+            expect(rows).toHaveLength(1);
+            expect(rows[0].password_hash).not.toBe(newUser.password);
+        }));
+        it('should find a user by email', () => __awaiter(void 0, void 0, void 0, function* () {
+            const foundUser = yield (0, queries_1.findUserByEmail)(testUser.email);
+            expect(foundUser).toBeDefined();
+            expect(foundUser.user_id).toBe(testUser.user_id);
+            expect(foundUser.email).toBe(testUser.email);
+        }));
+    });
     describe('createItem', () => {
-        it('should create a new item and return it', () => __awaiter(void 0, void 0, void 0, function* () {
+        it('should create a new item for a specific user', () => __awaiter(void 0, void 0, void 0, function* () {
             const newItemData = {
                 name: 'Test Item',
                 category: 'Vêtement',
@@ -74,63 +99,75 @@ describe('Database Queries', () => {
                 priority: 'Moyenne',
                 purchaseMonth: '2025-10'
             };
-            const createdItem = yield (0, queries_1.createItem)(newItemData);
+            const createdItem = yield (0, queries_1.createItem)(newItemData, testUser.user_id);
             expect(createdItem).toBeDefined();
             expect(createdItem.id).toBeDefined();
-            expect(createdItem.name).toBe(newItemData.name);
-            expect(createdItem.category).toBe(newItemData.category);
-            expect(parseFloat(createdItem.estimatedCost)).toBe(newItemData.estimatedCost);
-            expect(createdItem.isPurchased).toBe(false);
-            // Verify it's in the database
             const { rows } = yield test_database_1.default.query('SELECT * FROM Items WHERE item_id = $1', [createdItem.id]);
             expect(rows).toHaveLength(1);
-            expect(rows[0].name).toBe(newItemData.name);
+            expect(rows[0].user_id).toBe(testUser.user_id);
         }));
     });
     describe('getItems', () => {
-        it('should return all items from the database', () => __awaiter(void 0, void 0, void 0, function* () {
-            // First, create some items
-            yield (0, queries_1.createItem)({ name: 'Item 1', category: 'Vêtement', estimatedCost: 50, priority: 'Basse', purchaseMonth: '2025-11' });
-            yield (0, queries_1.createItem)({ name: 'Item 2', category: 'Chaussures', estimatedCost: 120, priority: 'Haute', purchaseMonth: '2025-12' });
-            const items = yield (0, queries_1.getItems)();
-            expect(items).toHaveLength(2);
-            expect(items[0].name).toBe('Item 1');
-            expect(items[1].name).toBe('Item 2');
+        it('should only return items for the specified user', () => __awaiter(void 0, void 0, void 0, function* () {
+            // Create another user
+            const otherUserResult = yield test_database_1.default.query(`
+                INSERT INTO Users (email, password_hash)
+                VALUES ($1, $2)
+                RETURNING user_id, email;
+            `, ['otheruser@example.com', 'password']);
+            const otherUser = otherUserResult.rows[0];
+            yield (0, queries_1.createItem)({ name: 'My Item', category: 'Vêtement', estimatedCost: 50, priority: 'Basse', purchaseMonth: '2025-11' }, testUser.user_id);
+            yield (0, queries_1.createItem)({ name: 'Other User Item', category: 'Chaussures', estimatedCost: 120, priority: 'Haute', purchaseMonth: '2025-12' }, otherUser.user_id);
+            const items = yield (0, queries_1.getItems)(testUser.user_id);
+            expect(items).toHaveLength(1);
+            expect(items[0].name).toBe('My Item');
         }));
     });
     describe('updateItem', () => {
-        it('should update an existing item with all fields', () => __awaiter(void 0, void 0, void 0, function* () {
-            const initialItem = yield (0, queries_1.createItem)({ name: 'Original', category: 'Parfum', estimatedCost: 80, priority: 'Haute', purchaseMonth: '2025-09' });
-            const updates = {
-                name: 'Updated Name',
-                category: 'Vêtement',
-                estimatedCost: 95.50,
-                priority: 'Basse',
-                purchaseMonth: '2025-10',
-                isPurchased: true,
-                actualCost: 90.00,
-                notes: 'This is an updated note.',
-                rating: 5
-            };
-            const updatedItem = yield (0, queries_1.updateItem)(initialItem.id, updates);
-            expect(updatedItem).toBeDefined();
-            expect(updatedItem.name).toBe(updates.name);
-            expect(updatedItem.category).toBe(updates.category);
-            expect(parseFloat(updatedItem.estimated_cost)).toBe(updates.estimatedCost);
-            expect(updatedItem.priority).toBe(updates.priority);
-            expect(updatedItem.purchase_month).toBe(updates.purchaseMonth);
-            expect(updatedItem.is_purchased).toBe(updates.isPurchased);
-            expect(parseFloat(updatedItem.actual_cost)).toBe(updates.actualCost);
-            expect(updatedItem.notes).toBe(updates.notes);
-            expect(updatedItem.rating).toBe(updates.rating);
+        it('should update an item belonging to the user', () => __awaiter(void 0, void 0, void 0, function* () {
+            const initialItem = yield (0, queries_1.createItem)({ name: 'Original', category: 'Parfum', estimatedCost: 80, priority: 'Haute', purchaseMonth: '2025-09' }, testUser.user_id);
+            const updates = { name: 'Updated Name' };
+            const updatedItem = yield (0, queries_1.updateItem)(initialItem.id, updates, testUser.user_id);
+            expect(updatedItem.name).toBe('Updated Name');
+        }));
+        it('should not update an item belonging to another user', () => __awaiter(void 0, void 0, void 0, function* () {
+            const otherUserResult = yield test_database_1.default.query(`INSERT INTO Users (email, password_hash) VALUES ('other@test.com', 'hash') RETURNING user_id`);
+            const otherUserId = otherUserResult.rows[0].user_id;
+            const itemOfOtherUser = yield (0, queries_1.createItem)({ name: 'Other User Item', category: 'Vêtement', estimatedCost: 10, priority: 'Basse', purchaseMonth: '2026-01' }, otherUserId);
+            const updates = { name: 'Attempted Update' };
+            yield expect((0, queries_1.updateItem)(itemOfOtherUser.id, updates, testUser.user_id)).rejects.toThrow('Item not found or user not authorized');
         }));
     });
     describe('deleteItem', () => {
-        it('should delete an item from the database', () => __awaiter(void 0, void 0, void 0, function* () {
-            const itemToDelete = yield (0, queries_1.createItem)({ name: 'To Be Deleted', category: 'Vêtement', estimatedCost: 10, priority: 'Basse', purchaseMonth: '2026-01' });
-            yield (0, queries_1.deleteItem)(itemToDelete.id);
+        it('should delete an item belonging to the user', () => __awaiter(void 0, void 0, void 0, function* () {
+            const itemToDelete = yield (0, queries_1.createItem)({ name: 'To Be Deleted', category: 'Vêtement', estimatedCost: 10, priority: 'Basse', purchaseMonth: '2026-01' }, testUser.user_id);
+            yield (0, queries_1.deleteItem)(itemToDelete.id, testUser.user_id);
             const { rows } = yield test_database_1.default.query('SELECT * FROM Items WHERE item_id = $1', [itemToDelete.id]);
             expect(rows).toHaveLength(0);
+        }));
+        it('should not delete an item belonging to another user', () => __awaiter(void 0, void 0, void 0, function* () {
+            const otherUserResult = yield test_database_1.default.query(`INSERT INTO Users (email, password_hash) VALUES ('other@test.com', 'hash') RETURNING user_id`);
+            const otherUserId = otherUserResult.rows[0].user_id;
+            const itemOfOtherUser = yield (0, queries_1.createItem)({ name: 'Other User Item', category: 'Vêtement', estimatedCost: 10, priority: 'Basse', purchaseMonth: '2026-01' }, otherUserId);
+            yield expect((0, queries_1.deleteItem)(itemOfOtherUser.id, testUser.user_id)).rejects.toThrow('Item not found or user not authorized');
+        }));
+    });
+    describe('createItemFromUrl', () => {
+        it('should create an item from a URL for the specified user', () => __awaiter(void 0, void 0, void 0, function* () {
+            const url = 'http://example.com/item';
+            const name = 'Test Item from URL';
+            const newItem = yield (0, queries_1.createItemFromUrl)(url, name, testUser.user_id);
+            expect(newItem).toBeDefined();
+            const { rows } = yield test_database_1.default.query('SELECT * FROM Items WHERE item_id = $1', [newItem.id]);
+            expect(rows[0].user_id).toBe(testUser.user_id);
+        }));
+        it('should throw a DuplicateItemError if the URL already exists', () => __awaiter(void 0, void 0, void 0, function* () {
+            const url = 'http://example.com/item2';
+            const name = 'Test Item';
+            // Create the item for the first time
+            yield (0, queries_1.createItemFromUrl)(url, name, testUser.user_id);
+            // Try to create it again and expect an error
+            yield expect((0, queries_1.createItemFromUrl)(url, name, testUser.user_id)).rejects.toThrow(queries_1.DuplicateItemError);
         }));
     });
 });

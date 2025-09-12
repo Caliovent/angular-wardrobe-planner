@@ -31,6 +31,7 @@ export class InventoryComponent {
   private notesUpdate$ = new Subject<{ id: number; notes: string }>();
   private ratingUpdate$ = new Subject<{ id: number; rating: number }>();
 
+  private backendUrl = 'https://angular-wardrobe-planner.onrender.com'; // Ceci devrait être une variable d'environnement
 
   // -- Computed Signals for derived data --
   totalPlannedCost = computed(() => this.items().reduce((sum, item) => sum + item.estimatedCost, 0));
@@ -264,5 +265,9 @@ export class InventoryComponent {
     const [year, month] = dateString.split('-');
     const date = new Date(Number(year), Number(month) - 1);
     return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  }
+
+  loginWithGoogle(): void {
+    window.location.href = `${this.backendUrl}/auth/google`;
   }
 }

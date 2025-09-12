@@ -1,6 +1,11 @@
+// File: server/src/routes.ts
 import express from 'express';
-import bcrypt from 'bcryptjs';
+import passport from 'passport';
 import jwt from 'jsonwebtoken';
+
+
+require('./passport-config'); // Initialise la configuration Passport
+
 import {
     getItems,
     createItem,
@@ -20,12 +25,45 @@ import {
 import { scrapeProductData } from './scraper';
 import authMiddleware from './authMiddleware';
 
+
 const router = express.Router();
 
-// ---- Main Routes ----
-router.get('/', (req, res) => {
-    res.send('Hello from the Garde-Robe Budget App backend!');
+// Routes d'authentification
+router.get('/auth/google', passport.authenticate('google', { session: false }));
+
+router.get(
+  '/auth/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/login-error' }),
+  (req, res) => {
+    const user: any = req.user;
+    const token = jwt.sign({ id: user.user_id }, process.env.JWT_SECRET!, {
+      expiresIn: '7d',
+    });
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+  }
+);
+
+// Routes API existantes
+router.get('/', (request, response) => {
+  response.json({ info: 'Node.js, Express, and Postgres API' });
 });
+
+
+// Protéger les routes API
+router.get('/items', authMiddleware, async (req, res) => {
+    const items = await getItems((req as any).user.id);
+    res.json(items);
+});
+router.post('/items', authMiddleware, async (req, res) => {
+    const item = await createItem(req.body, (req as any).user.id);
+    res.status(201).json(item);
+});
+router.put('/items/:id', authMiddleware, async (req, res) => {
+    const item = await updateItem(parseInt(req.params.id), req.body, (req as any).user.id);
+    res.json(item);
+});
+router.delete('/items/:id', authMiddleware, async (req, res) => {
+    await deleteItem(parseInt(req.params.id), (req as any).user.id);
 
 const asyncHandler = (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<any>) =>
     (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -155,21 +193,6 @@ router.delete('/api/items/:id/links/:linkId', authMiddleware, asyncHandler(async
     const userId = req.user!.id;
     await removeLink(Number(req.params.linkId), userId);
     res.status(204).send();
-}));
-
-
-// ---- Error Handling ----
-router.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (err instanceof DuplicateItemError) {
-        return res.status(409).json({ error: err.message });
-    }
-    // Added a check for authorization errors from verifyItemOwner
-    if (err.message === 'Item not found or user not authorized' || err.message === 'Link not found or user not authorized') {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
 });
-
 
 export default router;
