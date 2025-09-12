@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { WardrobeItem, ItemLink } from './models';
+import { WardrobeItem, ItemLink, PlanningSummary } from './models';
 import { environment } from '../environments/environment';
 
 @Injectable({
@@ -20,8 +20,12 @@ export class ApiService {
     return this.http.post<{ token: string }>(`${this.apiUrl}/auth/login`, credentials);
   }
 
-  getItems(): Observable<WardrobeItem[]> {
-    return this.http.get<WardrobeItem[]>(`${this.apiUrl}/items`);
+  getItems(status?: string): Observable<WardrobeItem[]> {
+    let url = `${this.apiUrl}/items`;
+    if (status) {
+      url += `?status=${status}`;
+    }
+    return this.http.get<WardrobeItem[]>(url);
   }
 
   createItem(item: Omit<WardrobeItem, 'id' | 'isPurchased' | 'imageUrls' | 'links'>): Observable<WardrobeItem> {
@@ -54,5 +58,9 @@ export class ApiService {
 
   createItemFromUrl(url: string, name: string): Observable<WardrobeItem> {
     return this.http.post<WardrobeItem>(`${this.apiUrl}/items/from-url`, { url, name });
+  }
+
+  getPlanningSummary(): Observable<PlanningSummary> {
+    return this.http.get<PlanningSummary>(`${this.apiUrl}/planning/summary`);
   }
 }

@@ -1,6 +1,7 @@
 -- Define ENUM types first
 CREATE TYPE item_category AS ENUM ('Vêtement', 'Chaussures', 'Parfum');
 CREATE TYPE item_priority AS ENUM ('Haute', 'Moyenne', 'Basse');
+CREATE TYPE item_status AS ENUM ('inbox', 'planned');
 
 -- Table: Users
 CREATE TABLE Users (
@@ -18,6 +19,7 @@ CREATE TABLE Items (
     user_id INT NOT NULL,
     name VARCHAR(255) NOT NULL,
     category item_category NOT NULL,
+    status item_status NOT NULL DEFAULT 'planned',
     estimated_cost DECIMAL(10, 2) NOT NULL,
     actual_cost DECIMAL(10, 2),
     priority item_priority NOT NULL,
