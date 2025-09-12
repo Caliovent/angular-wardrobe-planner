@@ -4,17 +4,28 @@ import { InventoryComponent } from './inventory/inventory.component';
 
 import { AuthCallbackComponent } from './auth/callback/callback.component';
 
-import { LoginComponent } from './auth/login/login.component';
-import { RegisterComponent } from './auth/register/register.component';
 import { InboxComponent } from './inbox/inbox.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { HomeComponent } from './home/home.component'; // Importer le nouveau composant
+import { authGuard } from './auth.guard'; // Importer le guard
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
-  { path: 'inbox', component: InboxComponent },
-  { path: 'dashboard', component: DashboardComponent },
-  { path: '', redirectTo: '/inventory', pathMatch: 'full' },
-  { path: 'inventory', component: InventoryComponent },
-  { path: 'auth/callback', component: AuthCallbackComponent }
+  { path: '', component: HomeComponent }, // Page par défaut
+  {
+    path: 'inventory',
+    component: InventoryComponent,
+    canActivate: [authGuard] // Protéger la route
+  },
+  {
+    path: 'inbox',
+    component: InboxComponent,
+    canActivate: [authGuard] // Protéger la route
+  },
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+    canActivate: [authGuard] // Protéger la route
+  },
+  { path: 'auth/callback', component: AuthCallbackComponent },
+  { path: '**', redirectTo: '', pathMatch: 'full' } // Redirection pour les routes inconnues
 ];
