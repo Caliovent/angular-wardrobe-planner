@@ -180,26 +180,21 @@ router.put('/api/items/:id', authMiddleware, asyncHandler(async (req, res, next)
 router.post('/api/items/from-url', authMiddleware, asyncHandler(async (req, res, next) => {
     const userId = (req.user as any).userId;
     const { url, name } = req.body;
-    // Basic validation
+
     if (!url || !name) {
         return res.status(400).json({ error: 'URL and name are required' });
     }
-    const newItem = await createItemFromUrl(url, name, userId);
 
-    // Respond immediately
-    res.status(201).json(newItem);
-
-    // Start scraping in the background
-    scrapeProductData(url)
-        .then(scrapedData => {
-            if (scrapedData.imageUrl || scrapedData.price) {
-                // If we got data, update the item
-                updateItemWithScrapedData(newItem.id, scrapedData);
-            }
-        })
-        .catch(error => {
-            console.error(`Scraping failed for item ${newItem.id}:`, error);
-        });
+    try {
+        const newItem = await createItemFromUrl(url, name, userId);
+        res.status(201).json(newItem);
+    } catch (error) {
+        if (error instanceof DuplicateItemError) {
+            return res.status(409).json({ message: error.message });
+        }
+        // Forward other errors to the global error handler
+        next(error);
+    }
 }));
 
 // ---- Images API ----

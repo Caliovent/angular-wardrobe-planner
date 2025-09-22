@@ -14,6 +14,16 @@
     <ion-row>
       <ion-col *ngFor="let item of items()" size="12" size-md="6" size-lg="4">
         <ion-card>
+          <!-- Section pour l'image -->
+          <ng-container *ngIf="item.imageUrls && item.imageUrls.length > 0; else noImagePlaceholder">
+            <img [src]="item.imageUrls[0]" alt="Image de {{ item.name }}" class="h-48 w-full object-cover" />
+          </ng-container>
+          <ng-template #noImagePlaceholder>
+            <div class="h-48 w-full bg-gray-100 flex items-center justify-center">
+              <ion-icon name="image-outline" size="large" class="text-gray-400"></ion-icon>
+            </div>
+          </ng-template>
+
           <ion-card-content>
             <form #form="ngForm" (ngSubmit)="planItem(item)">
               <ion-list>

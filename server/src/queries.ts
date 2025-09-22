@@ -1,3 +1,4 @@
+import { scrapeProductData } from './scraper';
 import pool from './database';
 import bcrypt from 'bcryptjs';
 
@@ -333,44 +334,58 @@ export class DuplicateItemError extends Error {
 }
 
 export const createItemFromUrl = async (itemUrl: string, itemName: string, userId: number) => {
-    // First, check if the URL already exists.
-    const existingLinkResult = await pool.query('SELECT * FROM Links WHERE url = $1', [itemUrl]);
+    // First, check if the URL already exists for this user to avoid duplicates.
+    const existingLinkResult = await pool.query(
+        'SELECT l.link_id FROM Links l JOIN Items i ON l.item_id = i.item_id WHERE l.url = $1 AND i.user_id = $2',
+        [itemUrl, userId]
+    );
+
     if (existingLinkResult.rows.length > 0) {
         throw new DuplicateItemError(`An item with this URL already exists.`);
     }
-    // Begin a transaction
+
+    // 1. Scrape data from the URL
+    const scrapedData = await scrapeProductData(itemUrl);
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        // 1. Create a new item with default values
+        // 2. Create a new item with scraped data or defaults
         const defaultItem = {
             name: itemName,
-            category: 'Vêtement', // Default category, user can change it later
-            estimatedCost: 0,    // Default cost
-            priority: 'Moyenne', // Default priority
-            purchaseMonth: new Date().toISOString().slice(0, 7) // Default to current month
+            category: 'Vêtement',
+            estimatedCost: scrapedData.price || 0, // Use scraped price or default to 0
+            priority: 'Moyenne',
+            purchaseMonth: new Date().toISOString().slice(0, 7)
         };
 
         const itemQuery = `
-      INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month, status)
-      VALUES ($1, $2, $3, $4, $5, $6, 'inbox')
-      RETURNING *;
-    `;
+            INSERT INTO Items (user_id, name, category, estimated_cost, priority, purchase_month, status)
+            VALUES ($1, $2, $3, $4, $5, $6, 'inbox')
+            RETURNING *;
+        `;
         const itemValues = [userId, defaultItem.name, defaultItem.category, defaultItem.estimatedCost, defaultItem.priority, defaultItem.purchaseMonth];
         const itemResult = await client.query(itemQuery, itemValues);
         const newItemRow = itemResult.rows[0];
 
-        // 2. Add the provided URL as a link to this new item
+        // 3. Add the provided URL as a link to this new item
         const linkQuery = 'INSERT INTO Links (item_id, url, annotation) VALUES ($1, $2, $3) RETURNING *;';
         const linkValues = [newItemRow.item_id, itemUrl, 'Lien principal'];
         const linkResult = await client.query(linkQuery, linkValues);
         const newLink = linkResult.rows[0];
 
-        // Commit the transaction
+        // 4. If an image was scraped, add it to the Images table
+        const imageUrls = [];
+        if (scrapedData.imageUrl) {
+            const imageQuery = 'INSERT INTO Images (item_id, image_url) VALUES ($1, $2) RETURNING image_url;';
+            const imageResult = await client.query(imageQuery, [newItemRow.item_id, scrapedData.imageUrl]);
+            imageUrls.push(imageResult.rows[0].image_url);
+        }
+
         await client.query('COMMIT');
 
-        // 3. Return the newly created item in the expected format
+        // 5. Return the newly created item in the expected format
         return {
             id: newItemRow.item_id,
             name: newItemRow.name,
@@ -383,7 +398,7 @@ export const createItemFromUrl = async (itemUrl: string, itemName: string, userI
             isPurchased: newItemRow.is_purchased,
             notes: newItemRow.notes,
             rating: newItemRow.rating,
-            imageUrls: [],
+            imageUrls: imageUrls,
             links: [{ id: newLink.link_id, url: newLink.url, annotation: newLink.annotation }],
         };
 
